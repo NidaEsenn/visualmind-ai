@@ -4,7 +4,7 @@
 
 Search a private image library with natural language — *"dark SaaS dashboard with sidebar nav"*, *"health app onboarding screen"*, *"warm e-commerce product cards"* — and get ranked results in under 500 ms.
 
-![Demo] (docs/ScreenRecording2026-05-12at3.38.41PM-ezgif.com-video-to-gif-converter.gif)
+![Demo](docs/demo.gif)
 ---
 
 ## How It Works
