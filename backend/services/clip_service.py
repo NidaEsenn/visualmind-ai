@@ -18,6 +18,24 @@ from PIL import Image
 logger = logging.getLogger(__name__)
 
 
+# Descriptive prompts used to build per-industry reference embeddings.
+# These are passed through encode_text's UI template, so they read as:
+# "a screenshot of a <description> user interface design"
+_INDUSTRY_DESCRIPTIONS: dict[str, str] = {
+    "health":       "healthcare medical doctor patient hospital clinic telemedicine wellness",
+    "fintech":      "banking financial payments investment trading portfolio insurance",
+    "saas":         "software B2B dashboard analytics CRM data management admin panel",
+    "ecommerce":    "online shopping store product listing cart checkout marketplace retail",
+    "education":    "learning course lesson student teacher LMS e-learning curriculum",
+    "social":       "social network profile feed messaging community followers chat",
+    "travel":       "travel booking flight hotel destination tourism map itinerary",
+    "media":        "streaming video music news content publishing podcast entertainment",
+    "productivity": "task project management notes calendar collaboration workspace",
+    "crypto":       "cryptocurrency blockchain NFT DeFi token wallet exchange Web3",
+    "other":        "generic web application",
+}
+
+
 class CLIPService:
     """Wraps open_clip ViT-L/14 for image and text encoding."""
 
@@ -61,6 +79,9 @@ class CLIPService:
         _dim_map = {"ViT-B-32": 512, "ViT-B-16": 512, "ViT-L-14": 768, "ViT-H-14": 1024}
         self.embedding_dim = _dim_map.get(model_name, 512)
 
+        # Lazily populated by classify_industry on first call
+        self._industry_embeddings: dict[str, np.ndarray] | None = None
+
         logger.info("CLIP service ready — embedding dim: %d", self.embedding_dim)
 
     # ------------------------------------------------------------------
@@ -87,6 +108,35 @@ class CLIPService:
         features = self.model.encode_text(tokens)
         features = features / features.norm(dim=-1, keepdim=True)
         return features.squeeze(0).cpu().float().numpy()
+
+    def classify_industry(self, image_embedding: np.ndarray, min_gap: float = 0.02) -> str:
+        """Return the closest industry label for a pre-computed image embedding.
+
+        Compares the image vector against reference text embeddings for each
+        industry. Returns "other" if the best match does not beat the "other"
+        baseline by at least min_gap — avoids low-confidence overrides.
+        """
+        if self._industry_embeddings is None:
+            logger.info("Building industry reference embeddings…")
+            self._industry_embeddings = {
+                industry: self.encode_text(desc)
+                for industry, desc in _INDUSTRY_DESCRIPTIONS.items()
+            }
+
+        scores = {
+            ind: float(np.dot(image_embedding, emb))
+            for ind, emb in self._industry_embeddings.items()
+        }
+        other_score = scores["other"]
+        best = max((ind for ind in scores if ind != "other"), key=lambda k: scores[k])
+
+        if scores[best] - other_score >= min_gap:
+            logger.debug(
+                "CLIP industry: %s (%.3f) vs other (%.3f)",
+                best, scores[best], other_score,
+            )
+            return best
+        return "other"
 
     @torch.inference_mode()
     def batch_encode_images(self, images: list[Image.Image]) -> np.ndarray:

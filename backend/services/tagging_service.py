@@ -31,9 +31,22 @@ Return ONLY valid JSON with this exact structure:
   "layout_type": "<dashboard|landing|onboarding|form|card|other>",
   "color_mood": "<minimal|dark|colorful|warm|corporate|playful>",
   "ui_patterns": ["<pattern1>", "<pattern2>"],
-  "industry": "<fintech|saas|ecommerce|health|education|other>",
+  "industry": "<fintech|saas|ecommerce|health|education|social|travel|media|productivity|crypto|other>",
   "complexity": "<low|medium|high>"
 }
+
+Industry definitions — pick the closest match, never default to "other" if a specific category fits:
+- health: medical, healthcare, telemedicine, hospital, patient, doctor, clinic, pharmacy, wellness, fitness
+- fintech: banking, payments, finance, investment, insurance, accounting, crypto exchange, wallet
+- saas: software tools, B2B platforms, developer tools, API dashboards, admin panels, CRM, analytics
+- ecommerce: online store, shopping, product listings, cart, marketplace, retail
+- education: learning platform, courses, LMS, tutoring, school, university, e-learning
+- social: social network, messaging, community, dating, chat, feed, profiles
+- travel: flights, hotels, booking, maps, tourism, transportation, itinerary
+- media: streaming, news, podcast, video, music, publishing, content
+- productivity: task management, notes, calendar, project management, collaboration, time tracking
+- crypto: blockchain, NFT, DeFi, token, Web3, wallet, exchange
+- other: only if no above category fits at all
 
 For ui_patterns, choose from: cards, sidebar, hero, modal, nav, table, chart,
 progress-bar, illustration, avatar, form-fields, breadcrumb, tabs, carousel,
@@ -138,7 +151,10 @@ class TaggingService:
             color_mood = "minimal"
 
         industry = data.get("industry", "other")
-        if industry not in {"fintech", "saas", "ecommerce", "health", "education", "other"}:
+        if industry not in {
+            "fintech", "saas", "ecommerce", "health", "education",
+            "social", "travel", "media", "productivity", "crypto", "other"
+        }:
             industry = "other"
 
         complexity = data.get("complexity", "medium")

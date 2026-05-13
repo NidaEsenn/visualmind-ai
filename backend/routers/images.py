@@ -215,6 +215,16 @@ async def upload_images(
         # --- VLM tagging ---
         image_tags: ImageTags = tagging_service.tag_image(clip_input)
 
+        # --- CLIP fallback: override "other" industry with nearest-neighbor classification ---
+        if image_tags.industry == "other":
+            clip_industry = clip_service.classify_industry(embedding)
+            if clip_industry != "other":
+                logger.info(
+                    "CLIP overrides Gemini industry 'other' → '%s' for %s",
+                    clip_industry, upload.filename,
+                )
+                image_tags = image_tags.model_copy(update={"industry": clip_industry})
+
         # --- Build Qdrant payload ---
         payload = {
             "url": f"/static/images/{img_id}.{ext}",

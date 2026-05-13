@@ -125,3 +125,67 @@ Text search uses two complementary signals:
 2. **Tag keyword boost** — structured Gemini tags (industry, layout, patterns) are matched against query keywords; matching tags add a calibrated score boost before final ranking
 
 This two-stage approach ensures that `"health app"` ranks a doctor-UI landing page above a visually similar social app — even when raw CLIP scores are close.
+
+---
+
+## Docker Setup
+
+The entire stack runs with a single command:
+
+```bash
+# 1. Set your Gemini API key
+echo "GEMINI_API_KEY=your-key-here" > .env
+
+# 2. Build and start all services
+docker compose up --build
+
+# 3. Open http://localhost in your browser
+```
+
+Services started by Docker Compose:
+
+| Service | Port | Description |
+|---------|------|-------------|
+| `frontend` | 80 | React app (nginx, proxies API calls) |
+| `backend` | 8000 | FastAPI server |
+| `qdrant` | internal | Vector database |
+
+Uploaded images and Qdrant data persist in named Docker volumes across restarts.
+
+> **Note:** First startup downloads the CLIP ViT-B/32 weights (~350 MB) and caches them in a volume — subsequent starts are fast.
+
+---
+
+## Design Decisions
+
+### Why CLIP ViT-B/32 instead of a larger model?
+
+Three variants were considered:
+
+| Model | Params | Retrieval quality | Runs locally (8 GB RAM) |
+|-------|--------|-------------------|------------------------|
+| ViT-B/32 | 88 M | Good | Yes |
+| ViT-L/14 | 307 M | Better | Barely (slow) |
+| ViT-H/14 | 632 M | Best | No |
+
+ViT-B/32 delivers meaningful semantic search within the hardware constraints of a typical developer laptop and Apple Silicon (MPS), with sub-100 ms encode time per image.
+
+### Why tag-boosted reranking instead of pure CLIP?
+
+During testing, CLIP ranked a social app above a health UI for the query `"health app"` (CLIP scores: 0.2599 vs 0.2445). Both UIs share similar visual structure — cards, nav bar, light background — so raw embedding similarity was misleading.
+
+The tag boost (+0.08 per keyword match in Gemini-generated tags) corrects for domain specificity without discarding the semantic signal. Weight 0.08 was chosen empirically: large enough to flip the ranking in domain-mismatch cases, small enough not to override CLIP when tags are absent or irrelevant.
+
+### Why Gemini Flash for tagging instead of a local model?
+
+A local VLM large enough to reliably extract structured metadata (e.g. LLaVA-13B) would require 16+ GB VRAM — incompatible with the target hardware. Gemini 2.5 Flash provides accurate multimodal classification via API with ~1–2 s latency on a free quota.
+
+The tagging call is isolated behind a retry-with-backoff wrapper and falls back to safe defaults on failure, so the upload pipeline never blocks on a quota error.
+
+### Why Qdrant instead of a hosted vector DB?
+
+The project is designed to run offline with no external dependencies beyond the Gemini API key. Qdrant ships as a single binary (or Docker image), supports HNSW cosine search with payload filtering, and has an ergonomic Python client. Pinecone/Weaviate were ruled out because they require network access and paid tiers for meaningful scale.
+
+### Why Reciprocal Rank Fusion for hybrid search?
+
+RRF fuses dense (CLIP) and sparse (BM25) ranked lists without requiring score normalization. This is important because cosine similarity scores (0–1) and BM25 scores (unbounded) are not directly comparable. RRF treats both as ordinal rankings and rewards documents that appear near the top of either list, producing stable results regardless of the raw score scales.

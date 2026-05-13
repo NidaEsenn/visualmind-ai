@@ -16,7 +16,7 @@ const FILTER_SECTIONS = [
   {
     key: 'industry',
     label: 'Industry',
-    options: ['fintech', 'saas', 'ecommerce', 'health', 'education', 'other']
+    options: ['fintech', 'saas', 'ecommerce', 'health', 'education', 'social', 'travel', 'media', 'productivity', 'crypto', 'other']
   },
   {
     key: 'complexity',
