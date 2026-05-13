@@ -1,6 +1,6 @@
 # VisualMind AI
 
-** AI-powered visual memory system for designers and creative teams. The idea is to turn messy screenshot/reference collections into a searchable knowledge base. Users could save screenshots, UI inspirations, branding examples, landing pages, etc., and then search them naturally with queries like “find fintech-style onboarding screens” or “similar minimal landing pages.”
+**AI-powered visual memory system for designers and creative teams. The idea is to turn messy screenshot/reference collections into a searchable knowledge base. Users could save screenshots, UI inspirations, branding examples, landing pages, etc., and then search them naturally with queries like “find fintech-style onboarding screens” or “similar minimal landing pages.”
 The goal is to help designers and agencies organize visual inspiration, rediscover past references quickly, and build a long-term “design intelligence” layer from accumulated work and screenshots instead of losing everything in random folders and tabs.**
 
 Search a private image library with natural language — *"dark SaaS dashboard with sidebar nav"*, *"health app onboarding screen"*, *"warm e-commerce product cards"* — and get ranked results in under 500 ms.
